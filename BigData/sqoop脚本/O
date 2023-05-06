@@ -1,0 +1,69 @@
+#! /bin/bash
+
+
+case $1 in
+"-s1"){
+echo "==========从Linux本地装载数据到Hive表中【前提：表存在】==========="
+read -p '请输入Linux本地数据的绝对路径：' linuxpath
+read -p '请输入Hive数据库：' database
+read -p '请输入Hive数据表：' table
+hive -e "load data local inpath '$linuxpath' overwrite into table $database.$table"
+};;
+"-s2"){
+echo "==========从HDFS装载数据到Hive表中【前提：表存在】==========="
+read -p '请输入Linux本地数据的绝对路径：' hdfspath
+read -p '请输入Hive数据库：' database
+read -p '请输入Hive数据表：' table
+hive -e "load data inpath '$hdfspath' overwrite into table $database.$table"
+};;
+"-s3"){
+echo "==========启动Sqoop将数据从Mysql表中传输到Hive表中【Hive表不用提前存在】==========="
+read -p '请输入源头的Mysql数据库:' mysql_database
+read -p '请输入源头的Mysql数据表:' mysql_table
+read -p '请输入目的地的Hive数据库:' hive_database
+read -p '请输入目的地的Hive数据表:' hive_table
+
+/opt/module/sqoop/bin/sqoop import \
+--connect jdbc:mysql://hadoop202:3306/$mysql_database \
+--username root \
+--password 123456 \
+--table $mysql_table \
+--num-mappers 1 \
+--hive-import \
+--fields-terminated-by "\t" \
+--hive-overwrite \
+--create-hive-table \
+--hive-table $hive_database.$hive_table
+};;
+"-s4"){
+echo "==========启动Sqoop将数据从Hive表中传输到Mysql表中【建议：Mysql表提前存在】==========="
+read -p '请输入hive的数据库：' hive_database
+read -p '请输入Hive的数据表：' hive_table
+read -p '请输入Hive表数据的分割符：' splitchar
+read -p '请输入Mysql的数据库：' mysql_database
+read -p '请输入Mysql的数据表：' mysql_table
+
+/opt/module/sqoop/bin/sqoop export \
+--connect jdbc:mysql://hadoop202:3306/$mysql_database \
+--username root \
+--password 123456 \
+--table $mysql_table \
+--num-mappers 1 \
+--export-dir /user/hive/warehouse/$hive_database.db/$hive_table \
+--input-fields-terminated-by "$splitchar"
+};;
+
+
+
+*)--*匹配其他的参数
+echo "命令输入错误,正确命令：
+-s1		从Linux本地装载数据到Hive表中【前提：表存在】
+-s2		从HDFS装载数据到Hive表中【前提:表存在】
+-s3		启动Sqoop将数据从Mysql表中传输到Hive表中【Hive表不用提前存在--\t分隔符】
+-s4		启动Sqoop将数据从Hive表中传输到Mysql表中【建议：Mysql表提前存在】
+"
+exit;
+;;
+esac
+
+echo "Execution Done!!!"
